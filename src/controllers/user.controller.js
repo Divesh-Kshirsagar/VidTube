@@ -29,7 +29,6 @@ const generateToken = async (userId) => {
 
 const registerUser = asyncHandler(async (req, res) => {
     const { fullname, email, username, password } = req.body;
-    
 
     if (
         [fullname, email, username, password].some(
@@ -106,7 +105,6 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     console.log(typeof password);
-    
 
     const user = await User.findOne({
         $or: [{ username }, { email }],
@@ -122,9 +120,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid user credentials");
     }
 
-    const { accessToken, refreshToken } = await generateToken(
-        user._id
-    );
+    const { accessToken, refreshToken } = await generateToken(user._id);
 
     const loggedInUser = await User.findById(user._id).select(
         "-password -refreshToken"
@@ -152,13 +148,36 @@ const loginUser = asyncHandler(async (req, res) => {
         );
 });
 
+const logoutUser = asyncHandler(async (req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $unset: {
+                refreshToken: 1, // this removes the field from document
+            },
+        },
+        {
+            new: true,
+        }
+    );
+
+    const options = {
+        httpOnly: true,
+        secure: true,
+    };
+
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, {}, "User logged Out"));
+});
+
 const updateAvatar = asyncHandler(async (req, res) => {});
 
 const updateCoverImage = asyncHandler(async (req, res) => {});
 
 const updateUserDetails = asyncHandler(async (req, res) => {});
-
-const logoutUser = asyncHandler(async (req, res) => {});
 
 export {
     registerUser,

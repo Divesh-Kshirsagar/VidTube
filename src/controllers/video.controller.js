@@ -107,7 +107,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     }
     
     // Log request files for debugging
-    console.log("Request files:", req.files);
+    // console.log("Request files:", req.files);
     
     // Check if files are uploaded
     if (!req.files || 

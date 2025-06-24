@@ -131,8 +131,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Thumbnail file is missing or upload failed");
     }
     
-    console.log("Video file path:", videoLocalPath);
-    console.log("Thumbnail file path:", thumbnailLocalPath);
+    // console.log("Video file path:", videoLocalPath);
+    // console.log("Thumbnail file path:", thumbnailLocalPath);
 
     // Upload files to cloudinary
     const videoFile = await uploadOnCloudinary(videoLocalPath);

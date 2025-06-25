@@ -50,7 +50,7 @@ To run VidTube on your local machine, follow these steps:
 
 1. **Clone the repository:**
     ```bash
-    git clone <YOUR_REPOSITORY_URL>
+    git clone https://github.com/Divesh-Kshirsagar/VidTube.git
     cd vidtube
     ```
 
@@ -164,10 +164,6 @@ Contributions to improve VidTube are welcome! Here's how you can contribute:
 - Add appropriate comments to your code
 - Update documentation as needed
 - Write meaningful commit messages
-
-## 📜 License:
-
-This project is licensed under the [ISC License](https://opensource.org/licenses/ISC)
 
 ## 🎉 Acknowledgements:
 

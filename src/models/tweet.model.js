@@ -9,17 +9,15 @@ updatedAt (Date)
 import mongoose, { Schema } from "mongoose";
 
 const tweetSchema = new Schema(
-    {
-        content: {
+    {        content: {
             type: String,
             required: true,
         },
-        owner: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
+        owner: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
     },
     { timestamps: true }
 );

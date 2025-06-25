@@ -1,0 +1,6 @@
+.vscode
+node_modules
+.env
+app.log
+.prettierrc
+.prettierignore

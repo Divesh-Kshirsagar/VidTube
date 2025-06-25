@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Streaming Test & Debug</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+    .video-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    video {
+      width: 100%;
+      border-radius: 4px;
+      background-color: #000;
+    }
+    .video-controls {
+      margin-top: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .video-controls button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .video-controls button:hover {
+      background-color: #3367d6;
+    }
+    .progress-container {
+      flex-grow: 1;
+      height: 10px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+    }
+    .progress-bar {
+      height: 100%;
+      background-color: #4285f4;
+      width: 0%;
+      transition: width 0.1s;
+    }
+    .timestamp {
+      font-size: 14px;
+      color: #555;
+      min-width: 100px;
+    }
+    .settings-panel {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    .settings-panel h3 {
+      margin-top: 0;
+      color: #333;
+    }
+    .range-input {
+      margin: 10px 0;
+    }
+    .range-input label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .range-input input, .range-input select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+      font-family: monospace;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .error {
+      color: #d32f2f;
+      font-weight: bold;
+    }
+    .success {
+      color: #388e3c;
+      font-weight: bold;
+    }
+    .debug-panel {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #fff3e0;
+      border-radius: 4px;
+      border: 1px solid #ffe0b2;
+    }
+    .debug-panel h3 {
+      margin-top: 0;
+      color: #e65100;
+    }
+    .debug-panel pre {
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    .debug-panel button {
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+      transition: background-color 0.2s;
+    }
+    .debug-panel button:hover {
+      background-color: #f57c00;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #ddd;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+      background-color: #f0f0f0;
+    }
+    .tab.active {
+      background-color: #fff;
+      border-color: #ddd;
+      margin-bottom: -1px;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <h1>Video Streaming Test & Debug</h1>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="player">Video Player</div>
+      <div class="tab" data-tab="debug">Streaming Debug</div>
+    </div>
+    
+    <div class="tab-content active" id="player-tab">
+      <video id="videoPlayer" controls>
+        <source id="videoSource" src="http://localhost:8000/api/v1/videos/685ab72be02544caf8111a74/stream" type="video/mp4">
+        Your browser does not support HTML5 video.
+      </video>
+      
+      <div class="video-controls">
+        <button id="playPauseBtn">Play</button>
+        <button id="rewindBtn">-10s</button>
+        <button id="forwardBtn">+10s</button>
+        <div class="progress-container" id="progressContainer">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <span class="timestamp" id="timestamp">00:00 / 00:00</span>
+      </div>
+      
+      <div class="settings-panel">
+        <h3>Streaming Settings</h3>      <div class="range-input">
+        <label for="videoUrl">Video URL:</label>
+        <input type="text" id="videoUrl" value="http://localhost:8000/api/v1/videos/685ab72be02544caf8111a74/stream" placeholder="Enter video URL">
+      </div>
+      <div class="range-input">
+        <label for="streamingMode">Streaming Mode:</label>
+        <select id="streamingMode">
+          <option value="redirect" selected>Redirect Mode (Default)</option>
+          <option value="proxy">Proxy Mode (Via Server)</option>
+        </select>
+      </div>
+      <div class="range-input">
+        <label for="videoId">Video ID (will update URL):</label>
+        <input type="text" id="videoId" value="685ab72be02544caf8111a74" placeholder="Enter video ID">
+      </div>
+        <div class="range-input">
+          <label for="rangeStart">Range Start (bytes):</label>
+          <input type="text" id="rangeStart" placeholder="e.g., 0">
+        </div>
+        <div class="range-input">
+          <label for="rangeEnd">Range End (bytes):</label>
+          <input type="text" id="rangeEnd" placeholder="e.g., 1000000">
+        </div>
+        <div class="range-input">
+          <label for="playbackRate">Playback Speed:</label>
+          <select id="playbackRate">
+            <option value="0.5">0.5x</option>
+            <option value="1" selected>1x (Normal)</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+        <button id="applySettings">Apply Settings</button>
+        <div class="status" id="statusLog">Status: Ready to stream</div>
+      </div>
+    </div>
+    
+    <div class="tab-content" id="debug-tab">
+      <div class="debug-panel">
+        <h3>File Path Debug</h3>
+        <p>The error shows the server is looking for the file at:</p>
+        <pre>/mnt/c/Users/Lenovo/Desktop/My Programs/NodeProjects/vidtube/src/temp/685ab72be02544caf8111a74_1750847664064.mp4</pre>
+        
+        <p>The issue is likely with the path resolution in your server code. Check for:</p>
+        <ol>
+          <li>Temporary file creation: Make sure the temporary directory exists</li>
+          <li>Path resolution: Windows vs WSL path differences</li>
+          <li>Permissions: Make sure server has permissions to write/read files</li>
+        </ol>
+        
+        <div class="range-input">
+          <label for="filePathToCheck">File Path to Check:</label>
+          <input type="text" id="filePathToCheck" value="/mnt/c/Users/Lenovo/Desktop/My Programs/NodeProjects/vidtube/src/temp/685ab72be02544caf8111a74_1750847664064.mp4" placeholder="Enter file path to check">
+        </div>
+        
+        <div class="range-input">
+          <label for="altFilePathToCheck">Alternative Path (Windows format):</label>
+          <input type="text" id="altFilePathToCheck" value="C:\Users\Lenovo\Desktop\My Programs\NodeProjects\vidtube\src\temp\685ab72be02544caf8111a74_1750847664064.mp4" placeholder="Enter Windows file path">
+        </div>
+        
+        <button id="checkFilePath">Check if File Exists</button>
+        <button id="checkVideoEndpoint">Check Video Endpoint</button>
+        <button id="testSimpleVideoRequest">Test Simple Video Request</button>
+        
+        <h3>Troubleshooting</h3>
+        <p>The streaming approach has been completely redesigned to solve the "Output stream closed" error:</p>
+        <ul>
+          <li><strong>Redirect Mode (Default):</strong> Directly redirects to the Cloudinary URL, bypassing our server</li>
+          <li><strong>Proxy Mode:</strong> Streams the video through our server using a simple HTTP proxy (no FFmpeg)</li>
+        </ul>
+        
+        <p>Benefits of the new approach:</p>
+        <ul>
+          <li>No more "Output stream closed" errors</li>
+          <li>Full video length plays correctly</li>
+          <li>Better performance by leveraging Cloudinary's CDN</li>
+          <li>Reduced server load</li>
+        </ul>
+        
+        <p>If you still have issues:</p>
+        <ol>
+          <li>Check if the Cloudinary URL works directly in your browser</li>
+          <li>Try switching between Redirect and Proxy modes</li>
+          <li>Check server logs for any errors</li>
+          <li>Verify your internet connection</li>
+        </ol>
+        
+        <h3>Response Headers</h3>
+        <div id="responseHeaders" class="status">No response received yet</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Tab functionality
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabId = tab.getAttribute('data-tab');
+          
+          // Update active tab
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // Update active content
+          tabContents.forEach(content => {
+            content.classList.remove('active');
+            if (content.id === `${tabId}-tab`) {
+              content.classList.add('active');
+            }
+          });
+        });
+      });
+      
+      // Elements
+      const video = document.getElementById('videoPlayer');
+      const videoSource = document.getElementById('videoSource');
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      const rewindBtn = document.getElementById('rewindBtn');
+      const forwardBtn = document.getElementById('forwardBtn');
+      const progressBar = document.getElementById('progressBar');
+      const progressContainer = document.getElementById('progressContainer');
+      const timestamp = document.getElementById('timestamp');
+      const videoUrlInput = document.getElementById('videoUrl');
+      const videoIdInput = document.getElementById('videoId');
+      const rangeStartInput = document.getElementById('rangeStart');
+      const rangeEndInput = document.getElementById('rangeEnd');
+      const playbackRateSelect = document.getElementById('playbackRate');
+      const applySettingsBtn = document.getElementById('applySettings');
+      const statusLog = document.getElementById('statusLog');
+      const filePathToCheck = document.getElementById('filePathToCheck');
+      const altFilePathToCheck = document.getElementById('altFilePathToCheck');
+      const checkFilePathBtn = document.getElementById('checkFilePath');
+      const checkVideoEndpointBtn = document.getElementById('checkVideoEndpoint');
+      const testSimpleVideoRequestBtn = document.getElementById('testSimpleVideoRequest');
+      const responseHeaders = document.getElementById('responseHeaders');
+      
+      // Initialize
+      let isPlaying = false;
+      
+      // Update video URL when ID changes
+      videoIdInput.addEventListener('input', function() {
+        updateVideoUrl();
+      });
+      
+      // Function to update video URL based on selected mode and ID
+      function updateVideoUrl() {
+        const baseUrl = 'http://localhost:8000/api/v1/videos/';
+        const id = videoIdInput.value;
+        const mode = document.getElementById('streamingMode').value;
+        
+        if (mode === 'proxy') {
+          videoUrlInput.value = baseUrl + id + '/stream?useProxy=true';
+        } else {
+          videoUrlInput.value = baseUrl + id + '/stream';
+        }
+      }
+      
+      // Update URL when streaming mode changes
+      document.getElementById('streamingMode').addEventListener('change', function() {
+        updateVideoUrl();
+      });
+      
+      // Update timestamp and progress bar
+      function updateProgress() {
+        const currentTime = video.currentTime;
+        const duration = video.duration || 0;
+        
+        // Format time
+        const formatTime = (time) => {
+          const minutes = Math.floor(time / 60);
+          const seconds = Math.floor(time % 60);
+          return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        };
+        
+        // Update UI
+        timestamp.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+        const progressPercentage = (duration > 0) ? (currentTime / duration) * 100 : 0;
+        progressBar.style.width = `${progressPercentage}%`;
+      }
+      
+      // Play/Pause button
+      playPauseBtn.addEventListener('click', function() {
+        if (isPlaying) {
+          video.pause();
+          playPauseBtn.textContent = 'Play';
+        } else {
+          video.play();
+          playPauseBtn.textContent = 'Pause';
+        }
+        isPlaying = !isPlaying;
+      });
+      
+      // Rewind button
+      rewindBtn.addEventListener('click', function() {
+        video.currentTime = Math.max(0, video.currentTime - 10);
+        updateProgress();
+      });
+      
+      // Forward button
+      forwardBtn.addEventListener('click', function() {
+        video.currentTime = Math.min(video.duration, video.currentTime + 10);
+        updateProgress();
+      });
+      
+      // Progress bar click
+      progressContainer.addEventListener('click', function(e) {
+        const rect = progressContainer.getBoundingClientRect();
+        const position = (e.clientX - rect.left) / rect.width;
+        video.currentTime = position * video.duration;
+        updateProgress();
+      });
+      
+      // Playback rate change
+      playbackRateSelect.addEventListener('change', function() {
+        video.playbackRate = parseFloat(this.value);
+        log(`Playback speed set to ${this.value}x`);
+      });
+      
+      // Video events
+      video.addEventListener('timeupdate', updateProgress);
+      video.addEventListener('play', () => {
+        isPlaying = true;
+        playPauseBtn.textContent = 'Pause';
+      });
+      video.addEventListener('pause', () => {
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+      });
+      video.addEventListener('loadedmetadata', () => {
+        updateProgress();
+        log(`<span class="success">Video metadata loaded. Duration: ${video.duration.toFixed(2)} seconds</span>`);
+      });
+      video.addEventListener('error', (e) => {
+        log(`<span class="error">Error: ${video.error ? video.error.message : 'Unknown error'}</span>`);
+        log(`<span class="error">This usually means the video file doesn't exist or the server can't access it.</span>`);
+      });
+      
+      // Logging function
+      function log(message) {
+        const now = new Date();
+        const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        statusLog.innerHTML = `[${time}] ${message}<br>` + statusLog.innerHTML;
+      }
+      
+      // Update response headers
+      function updateResponseHeaders(headers) {
+        if (!headers) {
+          responseHeaders.innerHTML = 'No headers received';
+          return;
+        }
+        
+        let headerHTML = '';
+        for (const [key, value] of Object.entries(headers)) {
+          headerHTML += `<strong>${key}:</strong> ${value}<br>`;
+        }
+        
+        responseHeaders.innerHTML = headerHTML || 'No headers received';
+      }
+      
+      // Check if file exists (simulated - this will actually check the endpoint response)
+      checkFilePathBtn.addEventListener('click', function() {
+        log('Checking if file exists (Note: This is simulated as browser cannot directly check file system)');
+        
+        // Show file paths we're checking
+        log(`Checking Linux path: ${filePathToCheck.value}`);
+        log(`Checking Windows path: ${altFilePathToCheck.value}`);
+        
+        // Create a small HEAD request to check if file exists through the server
+        const xhr = new XMLHttpRequest();
+        xhr.open('HEAD', videoUrlInput.value, true);
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            log(`<span class="success">Server responded with 200 OK. The endpoint is working!</span>`);
+            
+            // Collect response headers
+            const headers = {};
+            const rawHeaders = xhr.getAllResponseHeaders().trim().split(/[\r\n]+/);
+            rawHeaders.forEach(line => {
+              const parts = line.split(': ');
+              const header = parts.shift();
+              const value = parts.join(': ');
+              headers[header] = value;
+            });
+            
+            updateResponseHeaders(headers);
+            
+            // Check for content type and length
+            const contentType = xhr.getResponseHeader('Content-Type');
+            const contentLength = xhr.getResponseHeader('Content-Length');
+            
+            if (contentType && contentType.includes('video')) {
+              log(`<span class="success">Content-Type is ${contentType} - Looks good!</span>`);
+            } else {
+              log(`<span class="error">Warning: Content-Type is ${contentType || 'not specified'}. Expected video/*</span>`);
+            }
+            
+            if (contentLength) {
+              const sizeMB = (parseInt(contentLength) / (1024 * 1024)).toFixed(2);
+              log(`<span class="success">File size: ${sizeMB} MB</span>`);
+              
+              if (parseInt(contentLength) < 1000) {
+                log(`<span class="error">Warning: File size is very small (${contentLength} bytes). This might be an error response, not a video.</span>`);
+              }
+            } else {
+              log(`<span class="error">Warning: Content-Length not specified. The server might not be sending a file.</span>`);
+            }
+            
+            // Check for Accept-Ranges header
+            const acceptRanges = xhr.getResponseHeader('Accept-Ranges');
+            if (acceptRanges && acceptRanges.includes('bytes')) {
+              log(`<span class="success">Server supports range requests (Accept-Ranges: ${acceptRanges})</span>`);
+            } else {
+              log(`<span class="error">Warning: Server doesn't appear to support range requests. Streaming might not work properly.</span>`);
+            }
+            
+          } else if (xhr.status === 206) {
+            log(`<span class="success">Server responded with 206 Partial Content. Range requests are working!</span>`);
+            // Similar header collection as above
+            const headers = {};
+            const rawHeaders = xhr.getAllResponseHeaders().trim().split(/[\r\n]+/);
+            rawHeaders.forEach(line => {
+              const parts = line.split(': ');
+              const header = parts.shift();
+              const value = parts.join(': ');
+              headers[header] = value;
+            });
+            updateResponseHeaders(headers);
+          } else {
+            log(`<span class="error">Server responded with status ${xhr.status}. The file likely doesn't exist or cannot be accessed.</span>`);
+            if (xhr.status === 404) {
+              log(`<span class="error">404 Not Found: The server could not find the requested file. Check your video ID and path.</span>`);
+            } else if (xhr.status === 403) {
+              log(`<span class="error">403 Forbidden: The server doesn't have permission to access the file.</span>`);
+            } else if (xhr.status === 500) {
+              log(`<span class="error">500 Internal Server Error: There's a server-side issue. Check your server logs.</span>`);
+            }
+            updateResponseHeaders({
+              'Status': `${xhr.status} ${xhr.statusText}`,
+              'Message': 'Failed to access the file'
+            });
+          }
+        };
+        xhr.onerror = function() {
+          log(`<span class="error">Network error occurred. Make sure your server is running.</span>`);
+          updateResponseHeaders({
+            'Error': 'Network error - could not connect to server'
+          });
+        };
+        xhr.send();
+      });
+      
+      // Check video endpoint with range request
+      checkVideoEndpointBtn.addEventListener('click', function() {
+        log('Testing video endpoint with range request...');
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', videoUrlInput.value, true);
+        xhr.setRequestHeader('Range', 'bytes=0-1023'); // Request just the first KB to test
+        
+        xhr.onload = function() {
+          if (xhr.status === 206) {
+            log(`<span class="success">Server supports range requests (206 Partial Content)</span>`);
+            
+            // Collect response headers
+            const headers = {};
+            const rawHeaders = xhr.getAllResponseHeaders().trim().split(/[\r\n]+/);
+            rawHeaders.forEach(line => {
+              const parts = line.split(': ');
+              const header = parts.shift();
+              const value = parts.join(': ');
+              headers[header] = value;
+            });
+            
+            updateResponseHeaders(headers);
+            
+            // Check Content-Range header
+            const contentRange = xhr.getResponseHeader('Content-Range');
+            if (contentRange) {
+              log(`<span class="success">Server returned Content-Range: ${contentRange}</span>`);
+              
+              // Try to extract total size
+              const match = contentRange.match(/bytes 0-\d+\/(\d+)/);
+              if (match && match[1]) {
+                const totalSize = parseInt(match[1]);
+                const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+                log(`<span class="success">Total file size: ${sizeMB} MB</span>`);
+              }
+            } else {
+              log(`<span class="error">Warning: Server didn't return Content-Range header</span>`);
+            }
+            
+          } else if (xhr.status === 200) {
+            log(`<span class="error">Server returned 200 OK instead of 206 Partial Content. Range requests might not be supported.</span>`);
+            updateResponseHeaders({
+              'Status': '200 OK (Expected 206 Partial Content)',
+              'Warning': 'Server ignoring Range header - streaming might not work properly'
+            });
+          } else {
+            log(`<span class="error">Server responded with status ${xhr.status}. Range requests might not be working.</span>`);
+            updateResponseHeaders({
+              'Status': `${xhr.status} ${xhr.statusText}`,
+              'Error': 'Failed range request test'
+            });
+          }
+        };
+        
+        xhr.onerror = function() {
+          log(`<span class="error">Network error occurred. Make sure your server is running.</span>`);
+          updateResponseHeaders({
+            'Error': 'Network error - could not connect to server'
+          });
+        };
+        
+        xhr.send();
+      });
+      
+      // Test simple video request without range headers
+      testSimpleVideoRequestBtn.addEventListener('click', function() {
+        log('Testing simple video request without range headers...');
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', videoUrlInput.value, true);
+        
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            log(`<span class="success">Server responded with 200 OK to a standard request</span>`);
+            
+            // Collect response headers
+            const headers = {};
+            const rawHeaders = xhr.getAllResponseHeaders().trim().split(/[\r\n]+/);
+            rawHeaders.forEach(line => {
+              const parts = line.split(': ');
+              const header = parts.shift();
+              const value = parts.join(': ');
+              headers[header] = value;
+            });
+            
+            updateResponseHeaders(headers);
+            
+            log(`<span class="success">Received ${xhr.response.length} bytes of data</span>`);
+            
+            // Check content type
+            const contentType = xhr.getResponseHeader('Content-Type');
+            if (contentType) {
+              log(`<span class="success">Content-Type: ${contentType}</span>`);
+              
+              // Check if it's a video or error message
+              if (contentType.includes('video')) {
+                log(`<span class="success">Response is a video file</span>`);
+              } else if (contentType.includes('json') || contentType.includes('text')) {
+                try {
+                  let responseData = xhr.responseText;
+                  log(`<span class="error">Response might be an error message: ${responseData.substring(0, 100)}${responseData.length > 100 ? '...' : ''}</span>`);
+                } catch (e) {
+                  log(`<span class="error">Could not parse response as text</span>`);
+                }
+              }
+            }
+            
+          } else {
+            log(`<span class="error">Server responded with status ${xhr.status}</span>`);
+            updateResponseHeaders({
+              'Status': `${xhr.status} ${xhr.statusText}`,
+              'Error': 'Failed simple request test'
+            });
+          }
+        };
+        
+        xhr.onerror = function() {
+          log(`<span class="error">Network error occurred. Make sure your server is running.</span>`);
+          updateResponseHeaders({
+            'Error': 'Network error - could not connect to server'
+          });
+        };
+        
+        xhr.send();
+      });
+      
+      // Apply custom range settings
+      applySettingsBtn.addEventListener('click', function() {
+        const videoUrl = videoUrlInput.value.trim();
+        const streamingMode = document.getElementById('streamingMode').value;
+        
+        if (!videoUrl) {
+          log('<span class="error">Error: Please enter a valid video URL</span>');
+          return;
+        }
+        
+        // Reset video
+        video.pause();
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+        
+        log(`Applying settings with streaming mode: ${streamingMode}`);
+        
+        // In redirect mode, we just update the video source directly
+        if (streamingMode === 'redirect') {
+          log('Using redirect mode - changing video source directly');
+          videoSource.src = videoUrl;
+          video.load();
+          log('<span class="success">Video source updated</span>');
+          return;
+        }
+        
+        // For proxy mode, we use XHR to test with range requests
+        const rangeStart = rangeStartInput.value.trim();
+        const rangeEnd = rangeEndInput.value.trim();
+        
+        // Create a new XMLHttpRequest to fetch the video with Range header
+        const xhr = new XMLHttpRequest();
+        
+        // Set up request
+        xhr.open('GET', videoUrl, true);
+        
+        // Add Range header if specified
+        if (rangeStart || rangeEnd) {
+          let rangeHeader = 'bytes=';
+          
+          if (rangeStart) {
+            rangeHeader += rangeStart;
+          } else {
+            rangeHeader += '0';
+          }
+          
+          rangeHeader += '-';
+          
+          if (rangeEnd) {
+            rangeHeader += rangeEnd;
+          }
+          
+          xhr.setRequestHeader('Range', rangeHeader);
+          log(`Setting Range header: ${rangeHeader}`);
+        }
+        
+        // Handle response
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const contentRange = xhr.getResponseHeader('Content-Range');
+            const contentLength = xhr.getResponseHeader('Content-Length');
+            const contentType = xhr.getResponseHeader('Content-Type');
+            
+            log(`Request successful: Status ${xhr.status}`);
+            if (contentRange) log(`Content-Range: ${contentRange}`);
+            if (contentLength) log(`Content-Length: ${contentLength} bytes`);
+            if (contentType) log(`Content-Type: ${contentType}`);
+            
+            // Collect all headers for debug tab
+            const headers = {};
+            const rawHeaders = xhr.getAllResponseHeaders().trim().split(/[\r\n]+/);
+            rawHeaders.forEach(line => {
+              const parts = line.split(': ');
+              const header = parts.shift();
+              const value = parts.join(': ');
+              headers[header] = value;
+            });
+            updateResponseHeaders(headers);
+            
+            // Create a blob URL from the response
+            const blob = new Blob([xhr.response], { type: contentType || 'video/mp4' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // Update video source
+            videoSource.src = blobUrl;
+            video.load();
+            
+            log('<span class="success">Video loaded with custom range request</span>');
+          } else {
+            log(`<span class="error">Error: Server returned status ${xhr.status}</span>`);
+            updateResponseHeaders({
+              'Status': `${xhr.status} ${xhr.statusText}`,
+              'Error': 'Failed to load video'
+            });
+          }
+        };
+        
+        xhr.onerror = function() {
+          log('<span class="error">Error: Network error occurred</span>');
+          updateResponseHeaders({
+            'Error': 'Network error - could not connect to server'
+          });
+        };
+        
+        xhr.onprogress = function(e) {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            log(`Download progress: ${percentComplete.toFixed(2)}%`);
+          }
+        };
+        
+        // Set response type to arraybuffer for binary data
+        xhr.responseType = 'arraybuffer';
+        
+        // Send request
+        xhr.send();
+        log(`Sending request to ${videoUrl}`);
+      });
+      
+      // Initial log
+      log('Video player initialized');
+      log('<span class="error">Note: The server reported ENOENT (file not found) error</span>');
+    });
+  </script>
+</body>
+</html>

@@ -15,6 +15,7 @@
 ## ✨ Features:
 
 * **Video Uploads:** Seamlessly upload your video content to share with others. ⬆️
+* **Video Streaming:** Efficiently stream videos in packets using ffmpeg for optimized playback. 🎞️
 * **Thumbnail Support:** Upload custom thumbnails to make your videos stand out. 🖼️
 * **Tweet-like Posts:** Share short text updates, thoughts, or announcements. 🐦
 * **Playlist Creation:** Organize your favorite videos into curated playlists. 

@@ -7,7 +7,8 @@ import {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    streamVideo
 } from "../controllers/video.controller.js";
 
 const router = Router();
@@ -20,6 +21,9 @@ router.get("/", getAllVideos);
 
 // Get video details by ID
 router.get("/:videoId", getVideoById);
+
+// Stream video in chunks
+router.get("/:videoId/stream", streamVideo);
 
 /**
  * Protected routes - require authentication

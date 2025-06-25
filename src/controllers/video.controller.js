@@ -5,6 +5,27 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import fs from "fs";
+import path from "path";
+import ffmpeg from "fluent-ffmpeg";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+// For using __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Create temp directory for storing video chunks if it doesn't exist
+const tempDir = path.join(dirname(__dirname), "temp");
+
+// Log the temp directory path for debugging
+console.log("Temp directory path:", tempDir);
+
+// Ensure the temp directory exists
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+    console.log("Created temp directory at:", tempDir);
+}
 
 /**
  * @route GET /api/v1/videos
@@ -244,6 +265,100 @@ const getVideoById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route GET /api/v1/videos/:videoId/stream
+ * @description Stream video in chunks
+ * @access Public
+ */
+const streamVideo = asyncHandler(async (req, res) => {
+    const { videoId } = req.params;
+    const { range } = req.headers;
+    
+    // Validate videoId
+    if (!videoId) {
+        throw new ApiError(400, "Video ID is required");
+    }
+    
+    // Check if videoId is valid
+    if (!isValidObjectId(videoId)) {
+        throw new ApiError(400, "Invalid video ID format");
+    }
+    
+    // Get video details
+    const video = await Video.findById(videoId);
+    
+    // Check if video exists
+    if (!video || !video.isPublished) {
+        throw new ApiError(404, "Video not found");
+    }
+    
+    // Get video URL from cloudinary
+    const videoUrl = video.videoFile;
+    
+    if (!videoUrl) {
+        throw new ApiError(404, "Video file not found");
+    }
+    
+    try {
+        // If range header is missing, use default range
+        const rangeHeader = range || 'bytes=0-';
+        console.log("Range header:", rangeHeader);
+        
+        // Parse the range header
+        const parts = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10) || 0;
+        
+        // Define chunk size (1MB)
+        const CHUNK_SIZE = 1 * 1024 * 1024;
+        const end = parts[1] ? parseInt(parts[1], 10) : start + CHUNK_SIZE;
+        
+        // Set response headers
+        res.setHeader("Content-Range", `bytes ${start}-${end}/*`);
+        res.setHeader("Accept-Ranges", "bytes");
+        res.setHeader("Content-Type", "video/mp4");
+        res.setHeader("Content-Length", end - start + 1);
+        res.status(206); // Partial Content
+        
+        console.log(`Streaming video ${videoId} from ${videoUrl}`);
+        console.log(`Range: bytes ${start}-${end}`);
+        
+        // Method 1: Direct streaming approach
+        // Stream directly from ffmpeg to the response without temp files
+        ffmpeg(videoUrl)
+            .inputOptions([
+                `-ss ${start / CHUNK_SIZE}` // Seek to position
+            ])
+            .outputOptions([
+                `-t ${CHUNK_SIZE / 1024 / 1024}`, // Duration in seconds
+                "-movflags frag_keyframe+empty_moov", // Optimize for streaming
+                "-c:v copy", // Copy video codec without re-encoding
+                "-c:a copy", // Copy audio codec without re-encoding
+                "-f mp4" // Force MP4 format
+            ])
+            .on("start", (commandLine) => {
+                console.log("FFmpeg command:", commandLine);
+            })
+            .on("error", (err) => {
+                console.error("Error streaming video:", err);
+                
+                if (!res.headersSent) {
+                    res.status(500).json(
+                        new ApiResponse(500, null, "Error streaming video: " + err.message)
+                    );
+                }
+            })
+            .pipe(res, { end: true });
+            
+    } catch (error) {
+        console.error("Video streaming error:", error);
+        if (!res.headersSent) {
+            res.status(500).json(
+                new ApiResponse(500, null, "Error streaming video: " + error.message)
+            );
+        }
+    }
+});
+
+/**
  * @route PATCH /api/v1/videos/:videoId
  * @description Update video details including title, description, thumbnail
  * @access Private (Only video owner can update)
@@ -418,4 +533,5 @@ export {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
+    streamVideo
 };

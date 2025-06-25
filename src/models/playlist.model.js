@@ -15,22 +15,18 @@ const playlistSchema = new Schema(
         name: {
             type: String,
             required: true,
-        },
-        description: {
+        },        description: {
             type: String,
         },
-        video: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "Video",
-            },
-        ],
-        owner: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
+        videos: [{
+            type: Schema.Types.ObjectId,
+            ref: "Video",
+        }],
+        owner: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true
+        },
     },
     { timestamps: true }
 );

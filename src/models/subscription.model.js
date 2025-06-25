@@ -9,19 +9,16 @@ updatedAt (Date)
 import mongoose, { Schema } from "mongoose";
 
 const subscriptionSchema = new Schema(
-    {
-        channel: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User", //The channel Subscribing to 
-            },
-        ],
-        subscriber: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User", // The person subscribing
-            },
-        ],
+    {        channel: {
+            type: Schema.Types.ObjectId,
+            ref: "User", //The channel Subscribing to 
+            required: true
+        },
+        subscriber: {
+            type: Schema.Types.ObjectId,
+            ref: "User", // The person subscribing
+            required: true
+        },
     },
     { timestamps: true }
 );
